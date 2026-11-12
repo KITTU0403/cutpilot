@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CutPilot</title>
+<style>
+:root{color-scheme:light dark;--line:#8884;--acc:#3a4cff}
+body{font:15px/1.5 system-ui,sans-serif;max-width:760px;margin:0 auto;padding:24px 16px 60px}
+h1{margin:0 0 4px}.mut{opacity:.7;font-size:13.5px}
+fieldset{border:1px solid var(--line);border-radius:12px;margin:16px 0;padding:14px}
+legend{font-weight:700;padding:0 6px}
+textarea,input[type=text],select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;margin-top:6px}
+label{display:block;margin-top:10px}.chips label{display:inline-block;margin:6px 10px 0 0}
+button{font:inherit;font-weight:700;padding:11px 20px;border-radius:10px;border:0;background:var(--acc);color:#fff;cursor:pointer}
+button:disabled{opacity:.5}
+.bar{height:8px;border-radius:9px;background:var(--line);overflow:hidden;margin:12px 0}.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+video{max-width:100%;max-height:60vh;border-radius:10px;background:#000;display:block;margin:8px 0}
+pre{overflow:auto;max-height:220px;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:8px}
+</style></head><body>
+<h1>CutPilot</h1>
+<p class="mut">Upload raw footage, add a reference and a prompt. The server transcribes, analyzes, plans with Claude, reframes with face tracking and renders every ratio you pick (max 5 minutes).</p>
+<form id="f">
+<fieldset><legend>Footage</legend><input type="file" name="footage" multiple accept="video/*,image/*" required></fieldset>
+<fieldset><legend>Reference</legend>
+<input type="file" name="reference" accept="video/*" multiple>
+<label>Reference links, one per line (needs server option enabled)<textarea name="reference_urls" rows="2"></textarea></label>
+<label><input type="checkbox" name="rights_confirmed" value="true"> I have the rights to use these references</label></fieldset>
+<fieldset><legend>Prompt</legend>
+<textarea name="prompt" rows="3" placeholder="Example: 30 sec energetic reel, strong hook, warm look"></textarea>
+<label>Mode<select name="mode"><option value="shorts">Shorts and Reels</option><option value="long">Long video</option></select></label>
+<div class="chips" id="rs"></div>
+<label>Max length: <b id="mv">60</b>s<input type="range" name="max_seconds" min="10" max="300" step="5" value="60" style="width:100%"></label>
+<label>Look<select name="look"><option value="auto">Auto</option><option value="none">Natural</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="bw">Black and white</option><option value="vivid">Vivid</option><option value="cinematic">Cinematic</option></select></label>
+<label>Transition<select name="transition"><option value="cut">Hard cut</option><option value="fade">Fade</option></select></label>
+<label><input type="checkbox" name="auto_captions" value="true" checked> Auto captions from speech</label>
+<label>Caption lines if there is no speech (one per line)<textarea name="caption_lines" rows="2"></textarea></label></fieldset>
+<button id="go">Create video</button>
+</form>
+<div id="st" class="mut"></div><div class="bar"><i id="pb"></i></div><div id="out"></div>
+<details><summary>Edit plan</summary><pre id="plan"></pre></details>
+<script>
+const R=["9:16","16:9","1:1","4:5","4:3","21:9"],$=s=>document.querySelector(s);
+$("#rs").innerHTML=R.map((r,i)=>`<label><input type="checkbox" class="r" value="${r}" ${i==0?"checked":""}> ${r}</label>`).join("");
+$("[name=max_seconds]").oninput=e=>$("#mv").textContent=e.target.value;
+$("#f").onsubmit=async e=>{e.preventDefault();$("#go").disabled=true;$("#out").innerHTML="";
+ const fd=new FormData(e.target);
+ for(const k of ["auto_captions","rights_confirmed"])if(!fd.has(k))fd.set(k,"false");
+ fd.set("ratios",[...document.querySelectorAll(".r:checked")].map(x=>x.value).join(",")||"9:16");
+ $("#st").textContent="Uploading…";
+ const r=await fetch("/api/jobs",{method:"POST",body:fd});
+ if(!r.ok){$("#st").textContent="Upload failed: "+await r.text();$("#go").disabled=false;return}
+ const {id}=await r.json();
+ const t=setInterval(async()=>{const j=await (await fetch("/api/jobs/"+id)).json();
+  $("#st").textContent=j.message;$("#pb").style.width=j.progress+"%";
+  if(j.plan)$("#plan").textContent=JSON.stringify(j.plan,null,2);
+  $("#out").innerHTML=Object.keys(j.outputs||{}).map(k=>{const u=`/api/jobs/${id}/file/${k.replace(":","x")}`;return `<div><b>${k}</b><video controls src="${u}"></video><a href="${u}" download>Download ${k}</a></div>`}).join("");
+  if(j.status=="done"||j.status=="error"){clearInterval(t);$("#go").disabled=false}},2000)};
+</script></body></html>

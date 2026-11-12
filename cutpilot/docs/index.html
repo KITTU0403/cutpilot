@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CutPilot – Auto Video Editor</title>
+<style>
+:root{--bg:#eceff5;--card:#fff;--ink:#14213d;--mut:#5d6785;--line:#d5dae6;--acc:#3a4cff;--on:#fff;--tl:#e2e6f0;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1222;--card:#171c32;--ink:#eef0fa;--mut:#9aa3c4;--line:#29304f;--acc:#8f9bff;--on:#0e1222;--tl:#222948;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1222;--card:#171c32;--ink:#eef0fa;--mut:#9aa3c4;--line:#29304f;--acc:#8f9bff;--on:#0e1222;--tl:#222948;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.05;margin:0 0 8px;letter-spacing:-.02em;font-weight:800}
+.tag{color:var(--mut);max-width:60ch;margin:0 0 26px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:18px}
+h2{font-size:17px;margin:0 0 12px;font-weight:700}
+.mut{color:var(--mut);font-size:13.5px;white-space:pre-line}
+.drop{display:flex;flex-direction:column;gap:4px;padding:22px;border:2px dashed var(--line);border-radius:12px;cursor:pointer;text-align:center}
+.drop.hot,.drop:hover{border-color:var(--acc)}
+ul{list-style:none;margin:10px 0 0;padding:0}
+li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+li em{flex:1;font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li small{color:var(--mut)}
+li button{background:none;border:0;color:var(--mut);cursor:pointer;font-size:15px}
+textarea,select{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px}
+textarea:focus,select:focus,button:focus-visible,input:focus-visible+span{outline:2px solid var(--acc);outline-offset:2px}
+.lbl{display:block;margin:14px 0 4px;font-size:13.5px;color:var(--mut)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:12px}
+.seg button{flex:1;padding:9px;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+.seg .on{background:var(--acc);color:var(--on);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 14px;border-radius:99px;border:1px solid var(--line);background:none;color:inherit;font:inherit;cursor:pointer}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--on);font-weight:700}
+.row2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
+@media(max-width:520px){.row2{grid-template-columns:minmax(0,1fr)}}
+.row2 label{font-size:13.5px;color:var(--mut)}
+input[type=range]{width:100%;accent-color:var(--acc);margin-top:14px}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{padding:11px 18px;border-radius:10px;border:1px solid var(--line);background:none;color:inherit;font:inherit;cursor:pointer;font-weight:600}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--on)}
+.tl{display:flex;gap:2px;height:34px;margin:12px 0;border-radius:8px;overflow:hidden;background:var(--tl)}
+.tl i{display:block;min-width:2px}
+details{margin-top:8px}pre{max-height:240px;overflow:auto;font-size:12px;background:var(--bg);padding:10px;border-radius:8px}
+canvas{display:block;margin:0 auto;max-width:100%;max-height:56vh;background:#000;border-radius:10px}
+.bar{height:6px;border-radius:9px;background:var(--tl);margin:12px 0 8px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--acc)}
+.res{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.res video{display:block;max-width:100%;max-height:50vh;margin:8px 0;border-radius:10px;background:#000}
+.res a{color:var(--acc);font-weight:700}
+</style></head><body>
+<div class="wrap">
+<h1>CutPilot</h1>
+<p class="tag">Drop in raw footage, add a reference and a prompt. CutPilot plans the cuts and renders a finished video in every aspect ratio you pick, up to 5 minutes.</p>
+<div class="grid">
+<section>
+ <div class="card"><h2>1. Raw footage</h2>
+  <label class="drop" id="drop"><input type="file" id="fin" multiple accept="video/*,image/*" hidden><b>Choose videos or photos</b><span class="mut">Files stay in your browser. Nothing is sent to a server.</span></label>
+  <ul id="flist"></ul></div>
+ <div class="card"><h2>2. Reference style</h2>
+  <label class="btn" style="display:inline-block"><input type="file" id="rin" accept="video/*" hidden>Upload a reference video</label>
+  <div id="rinfo" class="mut" style="margin-top:8px">The reference length sets the cutting pace.</div>
+  <textarea id="links" rows="2" placeholder="Reference links (optional, saved as notes)"></textarea></div>
+ <div class="card"><h2>3. Your prompt</h2>
+  <textarea id="prompt" rows="4" placeholder="Example: 30 sec fast, energetic reel with a warm look"></textarea>
+  <div class="seg" id="modes"><button data-m="shorts" class="on">Shorts and Reels</button><button data-m="long">Long video</button></div>
+  <span class="lbl">Aspect ratios (pick as many as you need)</span><div id="ratios" class="chips"></div>
+  <div class="row2">
+   <label>Max length: <b id="capv">60s</b><input type="range" id="cap" min="10" max="300" step="5" value="60"></label>
+   <label>Look<select id="look"><option value="auto">Auto from prompt</option><option value="none">Natural</option><option value="warm">Warm</option><option value="cool">Cool</option><option value="bw">Black and white</option><option value="vivid">Vivid</option></select></label>
+   <label>Transition<select id="tr"><option value="cut">Hard cut</option><option value="fade">Fade through black</option></select></label>
+  </div>
+  <span class="lbl">Caption lines (one per line, optional)</span>
+  <textarea id="caps" rows="3" placeholder="Wait for the ending&#10;This changed everything"></textarea>
+  <div class="row"><button class="btn" id="plan">Build edit plan</button><button class="btn pri" id="render">Render videos</button></div></div>
+</section>
+<section>
+ <div class="card"><h2>Edit plan</h2>
+  <div id="sum" class="mut">Upload footage and press Build edit plan. The plan lists every cut before anything renders.</div>
+  <div id="tl" class="tl"></div>
+  <details><summary>Plan JSON</summary><pre id="json"></pre></details>
+  <div class="row"><button class="btn" id="dj" hidden>Download plan JSON</button></div></div>
+ <div class="card"><h2>Render</h2>
+  <canvas id="cv" width="540" height="960"></canvas>
+  <div class="bar"><i id="pb"></i></div><div id="st" class="mut">Videos render in real time. Keep this tab open and in front.</div>
+  <div id="res"></div></div>
+</section></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const R={"9:16":[540,960],"16:9":[960,540],"1:1":[720,720],"4:5":[640,800],"4:3":[800,600],"21:9":[1008,432]};
+const LOOK={none:"none",warm:"sepia(.25) saturate(1.2) contrast(1.05)",cool:"hue-rotate(-12deg) saturate(1.1) brightness(1.03)",bw:"grayscale(1) contrast(1.15)",vivid:"saturate(1.5) contrast(1.1)"};
+let media=[],mode="shorts",sel=new Set(["9:16"]),refPace=null,plan=null,AC=null,busy=false,stop=false;
+const fmt=s=>s>=60?Math.floor(s/60)+"m "+Math.round(s%60)+"s":(+s).toFixed(1)+"s";
+const st=t=>$("#st").textContent=t;
+const once=(el,ev)=>new Promise(r=>el.addEventListener(ev,r,{once:true}));
+
+function chips(){const box=$("#ratios");box.innerHTML="";for(const k in R){const b=document.createElement("button");b.textContent=k;b.className="chip"+(sel.has(k)?" on":"");b.onclick=()=>{sel.has(k)?sel.delete(k):sel.add(k);if(!sel.size)sel.add(k);chips()};box.append(b)}}
+chips();
+document.querySelectorAll("#modes button").forEach(b=>b.onclick=()=>{mode=b.dataset.m;document.querySelectorAll("#modes button").forEach(x=>x.classList.toggle("on",x===b));sel=new Set([mode==="shorts"?"9:16":"16:9"]);$("#cap").value=mode==="shorts"?60:300;$("#capv").textContent=$("#cap").value+"s";chips()});
+$("#cap").oninput=e=>$("#capv").textContent=e.target.value+"s";
+
+function addFiles(fl){for(const f of fl){const url=URL.createObjectURL(f);
+ if(f.type.startsWith("video/")){const el=document.createElement("video");el.preload="auto";el.playsInline=true;el.src=url;const m={name:f.name,kind:"video",el,dur:0,file:f};el.onloadedmetadata=()=>{m.dur=el.duration;list()};media.push(m)}
+ else if(f.type.startsWith("image/")){const el=new Image();el.src=url;media.push({name:f.name,kind:"image",el,dur:3})}}list()}
+function list(){const u=$("#flist");u.innerHTML="";media.forEach((m,i)=>{const li=document.createElement("li");li.innerHTML='<span>'+(m.kind==="video"?"🎞":"🖼")+'</span><em></em><small>'+(m.kind==="video"?fmt(m.dur||0):"photo")+'</small><button aria-label="Remove file">✕</button>';li.querySelector("em").textContent=m.name;li.querySelector("button").onclick=()=>{media.splice(i,1);list()};u.append(li)})}
+$("#fin").onchange=e=>{addFiles(e.target.files);e.target.value=""};
+const dz=$("#drop");dz.ondragover=e=>{e.preventDefault();dz.classList.add("hot")};dz.ondragleave=()=>dz.classList.remove("hot");dz.ondrop=e=>{e.preventDefault();dz.classList.remove("hot");addFiles(e.dataTransfer.files)};
+$("#rin").onchange=e=>{const f=e.target.files[0];if(!f)return;const v=document.createElement("video");v.preload="metadata";v.src=URL.createObjectURL(f);v.onloadedmetadata=()=>{const d=v.duration;refPace=d<=45?1.4:d<=120?2.4:d<=240?3.6:5;$("#rinfo").textContent="Reference "+f.name+" ("+fmt(d)+") sets the pace to about "+refPace+"s per cut."}};
+
+function buildLocal(){
+ if(!media.length){st("Upload at least one video or photo first.");return null}
+ const total=media.reduce((a,m)=>a+(m.kind==="video"?(m.dur||0):3),0);
+ if(total<=0){st("Footage is still loading. Try again in a moment.");return null}
+ const p=$("#prompt").value,cap=+$("#cap").value,notes=[];
+ let target=null;const mt=p.match(/(\d+(?:\.\d+)?)\s*(minutes?|mins?|seconds?|secs?|s)\b/i);
+ if(mt)target=+mt[1]*(/^m/i.test(mt[2])?60:1);
+ if(target&&target>cap)notes.push("The prompt asked for "+fmt(target)+". Trimmed to the "+fmt(cap)+" limit.");
+ if(!target)target=mode==="shorts"?Math.min(45,total):total;
+ target=Math.min(target,cap,300);
+ if(target>total){target=total;notes.push("Your footage is shorter than the requested length.")}
+ target=Math.max(2,target);
+ let pace=refPace||(mode==="shorts"?1.8:4);
+ if(/fast|energetic|quick|punchy|hype|snappy/i.test(p))pace*=.65;
+ if(/slow|calm|cinematic|relax|smooth/i.test(p))pace*=1.6;
+ pace=Math.max(.8,pace);
+ let look=$("#look").value;
+ if(look==="auto")look=/warm|golden|sunset/i.test(p)?"warm":/cool|cold|blue/i.test(p)?"cool":/black|noir|mono|b&w/i.test(p)?"bw":/vivid|vibrant|colou?rful/i.test(p)?"vivid":"none";
+ const n=Math.max(1,Math.round(target/pace)),len=target/n,starts=[];let acc=0;
+ media.forEach(m=>{starts.push(acc);acc+=(m.kind==="video"?(m.dur||0):3)});
+ const lines=$("#caps").value.split("\n").map(s=>s.trim()).filter(Boolean),segs=[];
+ if(aiSegs)segs.push(...aiSegs);else for(let k=0;k<n;k++){
+  const pos=(k+.5)/n*total;let mi=0;starts.forEach((s,i)=>{if(pos>=s)mi=i});
+  const m=media[mi],md=m.kind==="video"?(m.dur||0):3,L=Math.min(len,md);
+  const inn=m.kind==="video"?Math.max(0,Math.min(pos-starts[mi]-L/2,md-L)):0;
+  segs.push({src:m.name,m:mi,in:+inn.toFixed(2),out:+(inn+L).toFixed(2),zoom:k%2?"out":"in",caption:lines.length?lines[Math.floor(k*lines.length/n)]:""});
+ }
+ if($("#links").value.trim())notes.push("Reference links are saved as notes only. This page cannot download remote videos. Upload a reference file to use its pace.");
+ const dur=segs.reduce((a,s)=>a+s.out-s.in,0);
+ plan={mode,ratios:[...sel],duration:+dur.toFixed(1),pace:+pace.toFixed(2),look,transition:$("#tr").value,prompt:p,referenceLinks:$("#links").value.trim(),segments:segs};
+ $("#sum").textContent=segs.length+" cuts, "+fmt(dur)+", about "+plan.pace+"s per cut. Look: "+look+". Transition: "+plan.transition+". Ratios: "+plan.ratios.join(", ")+(notes.length?"\n"+notes.join("\n"):"");
+ $("#tl").innerHTML="";segs.forEach(g=>{const d=document.createElement("i");d.style.flex=(g.out-g.in)+" 1 0";d.style.background="hsl("+(g.m*67%360)+" 60% 52%)";d.title=g.src+" "+g.in+"s to "+g.out+"s";$("#tl").append(d)});
+ $("#json").textContent=JSON.stringify(plan,null,2);$("#dj").hidden=false;return plan}
+$("#plan").onclick=()=>{if(build())st("Plan ready. Press Render videos.")};
+$("#dj").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(plan,null,2)],{type:"application/json"}));a.download="edit-plan.json";a.click()};
+
+function drawCap(c,t,W,H){const sh=mode==="shorts",fs=Math.round(W*(sh?.075:.04));c.font="800 "+fs+"px system-ui,sans-serif";c.textAlign="center";c.textBaseline="middle";
+ const words=(sh?t.toUpperCase():t).split(" "),ls=[];let cur="";
+ for(const w of words){const x=cur?cur+" "+w:w;if(c.measureText(x).width>W*.86&&cur){ls.push(cur);cur=w}else cur=x}ls.push(cur);
+ const y0=H*(sh?.7:.88)-(ls.length-1)*fs*.6;
+ ls.forEach((l,i)=>{const y=y0+i*fs*1.2;if(sh){c.lineWidth=fs*.18;c.strokeStyle="#000";c.lineJoin="round";c.strokeText(l,W/2,y);c.fillStyle="#ffd400"}else{const w=c.measureText(l).width;c.fillStyle="rgba(0,0,0,.6)";c.fillRect(W/2-w/2-12,y-fs*.65,w+24,fs*1.3);c.fillStyle="#fff"}c.fillText(l,W/2,y)})}
+
+async function playSeg(c,s,W,H,base,total){
+ const m=media[s.m],el=m.el,len=s.out-s.in,v=m.kind==="video";
+ if(v){el.pause();el.currentTime=s.in;await Promise.race([once(el,"seeked"),new Promise(r=>setTimeout(r,1200))]);try{await el.play()}catch(e){}}
+ const t0=performance.now();
+ await new Promise(res=>{const f=()=>{const e=(performance.now()-t0)/1000;if(e>=len||stop){res();return}
+  const p=e/len,z=s.zoom==="in"?1+.12*p:1.12-.12*p;
+  c.filter="none";c.globalAlpha=1;c.fillStyle="#000";c.fillRect(0,0,W,H);
+  c.globalAlpha=plan.transition==="fade"?Math.max(0,Math.min(1,e/.25,(len-e)/.25)):1;
+  c.filter=LOOK[plan.look];
+  const sw=v?el.videoWidth:el.naturalWidth,sh=v?el.videoHeight:el.naturalHeight;
+  if(sw){const k=Math.max(W/sw,H/sh)*z,dw=sw*k,dh=sh*k;c.drawImage(el,(W-dw)/2,(H-dh)/2,dw,dh)}
+  c.filter="none";c.globalAlpha=1;
+  if(s.caption)drawCap(c,s.caption,W,H);
+  $("#pb").style.width=((base+e)/total*100)+"%";
+  requestAnimationFrame(f)};f()});
+ if(v)el.pause()}
+
+async function renderOne(r){
+ const [W,H]=R[r],cv=$("#cv");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+ AC=AC||new (window.AudioContext||window.webkitAudioContext)();await AC.resume();
+ const dest=AC.createMediaStreamDestination();
+ media.forEach(m=>{if(m.kind==="video"){m.node=m.node||AC.createMediaElementSource(m.el);m.node.disconnect();m.node.connect(dest)}});
+ const stream=cv.captureStream(30);dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+ const mime=["video/mp4","video/webm;codecs=vp9,opus","video/webm"].find(t=>MediaRecorder.isTypeSupported(t))||"";
+ const rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:5e6}:{}),ch=[];
+ rec.ondataavailable=e=>{if(e.data.size)ch.push(e.data)};
+ const done=new Promise(r=>rec.onstop=r);rec.start(1000);
+ let base=0;const total=plan.duration;
+ for(const s of plan.segments){if(stop)break;await playSeg(c,s,W,H,base,total);base+=s.out-s.in}
+ rec.stop();await done;
+ const type=rec.mimeType||"video/webm",ext=type.includes("mp4")?"mp4":"webm",blob=new Blob(ch,{type}),url=URL.createObjectURL(blob);
+ const d=document.createElement("div");d.className="res";
+ d.innerHTML="<b>"+r+"</b><video controls playsinline></video><button class='btn'>Download "+ext.toUpperCase()+"</button>";
+ d.querySelector("video").src=url;d.querySelector("button").onclick=async()=>{const dl=await cap("downloads");const fn="cutpilot-"+r.replace(":","x")+"."+ext;if(!dl){const a=document.createElement("a");a.href=url;a.download=fn;a.click();return}try{await dl.save({filename:fn,data:blob})}catch(e){}};
+ $("#res").prepend(d)}
+
+$("#render").onclick=async()=>{
+ if(busy){stop=true;return}
+ busy=true;stop=false;$("#render").textContent="Stop";let ok=null;try{ok=await build()}catch(e){st("Planning failed: "+e.message)}if(!ok){busy=false;$("#render").textContent="Render videos";return}
+ busy=true;stop=false;$("#render").textContent="Stop";
+ try{for(const r of plan.ratios){if(stop)break;st("Rendering "+r+" in real time. Keep this tab open and in front.");await renderOne(r)}
+  st(stop?"Stopped.":"Done. Download your videos below.")}
+ catch(e){st("Render failed: "+e.message+". Try Chrome or Edge on desktop.")}
+ busy=false;$("#render").textContent="Render videos";$("#pb").style.width="0"};
+/* ---- On-device analysis + AI director ---- */
+const cap=n=>window.claude?window.claude.use(n):Promise.resolve(null);
+let refStyle=null,aiSegs=null;
+const seekTo=(el,t)=>{el.currentTime=Math.min(t,Math.max(0,el.duration-.05));return Promise.race([once(el,"seeked"),new Promise(r=>setTimeout(r,1500))])};
+async function scan(el,step,thumbs,maxT){
+ const cw=64,ch=36,cv=document.createElement("canvas");cv.width=cw;cv.height=ch;const x=cv.getContext("2d",{willReadFrequently:true}),out=[];let prev=null;
+ for(let t=step/2;t<Math.min(el.duration,maxT||1e9);t+=step){
+  await seekTo(el,t);x.drawImage(el,0,0,cw,ch);const d=x.getImageData(0,0,cw,ch).data,lum=new Float32Array(cw*ch);
+  let L=0,S=0,W=0,df=0,sh=0;
+  for(let i=0,p=0;i<d.length;i+=4,p++){const r=d[i],g=d[i+1],b=d[i+2],y=(.3*r+.59*g+.11*b)/255;lum[p]=y;L+=y;S+=(Math.max(r,g,b)-Math.min(r,g,b))/255;W+=(r-b)/255;if(prev)df+=Math.abs(y-prev[p])}
+  for(let yy=1;yy<ch-1;yy++)for(let xx=1;xx<cw-1;xx++){const p=yy*cw+xx;sh+=Math.abs(4*lum[p]-lum[p-1]-lum[p+1]-lum[p-cw]-lum[p+cw])}
+  const n=cw*ch;out.push({t,luma:L/n,sat:S/n,warm:W/n,motion:prev?df/n:0,sharp:sh/n});
+  if(thumbs){const tc=document.createElement("canvas");tc.width=192;tc.height=108;tc.getContext("2d").drawImage(el,0,0,192,108);thumbs.push({t,tc})}
+  prev=lum}
+ return out}
+async function audioEnergy(m){try{if(!m.file||m.file.size>3e8)return null;AC=AC||new (window.AudioContext||window.webkitAudioContext)();const buf=await AC.decodeAudioData(await m.file.arrayBuffer()),c=buf.getChannelData(0),w=Math.floor(buf.sampleRate*.5),e=[];for(let i=0;i+w<=c.length;i+=w){let s=0;for(let j=i;j<i+w;j+=8)s+=c[j]*c[j];e.push(Math.sqrt(s/(w/8)))}return e}catch(e){return null}}
+async function analyzeAll(){
+ for(let i=0;i<media.length;i++){const m=media[i];if(m.an||m.kind!=="video")continue;
+  st("Analyzing clip "+(i+1)+" of "+media.length+": motion, sharpness, audio…");
+  const th=[];m.th=th;const s=await scan(m.el,Math.max(1,m.dur/48),th),en=await audioEnergy(m);
+  const mM=Math.max(1e-6,...s.map(a=>a.motion)),mS=Math.max(1e-6,...s.map(a=>a.sharp)),eM=en?Math.max(1e-6,...en):1;
+  s.forEach(a=>{a.en=en?en[Math.min(en.length-1,Math.floor(a.t/.5))]/eM:.5;a.score=(a.luma<.07||a.luma>.96?0:1)*(.35*a.sharp/mS+.3*a.motion/mM+.35*a.en)});
+  m.an={s,hasAudio:!!en}}}
+$("#rin").onchange=async e=>{const f=e.target.files[0];if(!f)return;const v=document.createElement("video");v.preload="auto";v.src=URL.createObjectURL(f);await once(v,"loadedmetadata");
+ $("#rinfo").textContent="Analyzing reference cuts, color and motion…";
+ const s=await scan(v,.3,null,60),df=s.map(a=>a.motion).slice(1),mean=df.reduce((a,b)=>a+b,0)/Math.max(1,df.length),sd=Math.sqrt(df.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,df.length)),cuts=df.filter(x=>x>mean+2.2*sd&&x>.12).length,d=Math.min(v.duration,60),avg=k=>s.reduce((a,b)=>a+b[k],0)/s.length;
+ refStyle={pace:Math.min(8,Math.max(.8,d/(cuts+1))),motion:avg("motion"),sat:avg("sat"),warm:avg("warm"),cuts};
+ refStyle.look=refStyle.sat<.06?"bw":refStyle.warm>.08?"warm":refStyle.warm<-.04?"cool":refStyle.sat>.3?"vivid":"none";refPace=refStyle.pace;
+ $("#rinfo").textContent="Reference "+f.name+": "+cuts+" cuts in the first "+fmt(d)+", about "+refStyle.pace.toFixed(1)+"s per cut, look: "+refStyle.look+"."};
+function smartSegs(n,len,lines){
+ const c=[];media.forEach((m,mi)=>{if(m.kind==="image"){c.push({m:mi,in:0,len:Math.min(3,len),score:.5});return}if(!m.an)return;m.an.s.forEach(p=>{const L=Math.min(len,m.dur);c.push({m:mi,in:Math.max(0,Math.min(p.t-L/2,m.dur-L)),len:L,score:p.score})})});
+ c.sort((a,b)=>b.score-a.score);let pick=[];
+ for(const x of c){if(pick.length>=n)break;if(pick.some(p=>p.m===x.m&&Math.abs(p.in-x.in)<Math.max(p.len,x.len)))continue;pick.push(x)}
+ if(!pick.length)return[];const chrono=(a,b)=>a.m-b.m||a.in-b.in;
+ pick=mode==="long"?pick.sort(chrono):[pick[0],...pick.slice(1).sort(chrono)];
+ return pick.map((x,k)=>({src:media[x.m].name,m:x.m,in:+x.in.toFixed(2),out:+(x.in+x.len).toFixed(2),zoom:k%2?"out":"in",caption:lines.length?lines[Math.floor(k*lines.length/pick.length)]:""}))}
+function sheet(m){const th=m.th||[],pk=th.filter((_,i)=>i%Math.ceil(th.length/12)===0).slice(0,12),c=document.createElement("canvas");c.width=768;c.height=Math.ceil(pk.length/4)*108;const x=c.getContext("2d");
+ pk.forEach((p,i)=>{const X=(i%4)*192,Y=Math.floor(i/4)*108;x.drawImage(p.tc,X,Y);x.fillStyle="rgba(0,0,0,.7)";x.fillRect(X,Y,60,18);x.fillStyle="#fff";x.font="13px sans-serif";x.fillText(p.t.toFixed(1)+"s",X+4,Y+14)});
+ return new Promise(r=>c.toBlob(r,"image/jpeg",.7))}
+async function askAI(max,target,lines){
+ const sample=await cap("sample");if(!sample)return null;let lim={};try{lim=await sample.limits()}catch(e){}
+ const vids=media.filter(m=>m.kind==="video"&&m.th&&m.th.length).slice(0,8),imgs=lim.images?await Promise.all(vids.map(sheet)):[];
+ const info=media.map((m,i)=>({index:i,type:m.kind,name:m.name,duration:+(m.dur||3).toFixed(1),has_audio:!!(m.an&&m.an.hasAudio),best_moments:m.an?m.an.s.slice().sort((a,b)=>b.score-a.score).slice(0,6).map(p=>({t:+p.t.toFixed(1),score:+p.score.toFixed(2)})):[]}));
+ const q="You are a professional video editor. Plan an edit and answer with JSON only.\nUser prompt: "+($("#prompt").value||"(none)")+"\nMode: "+(mode==="shorts"?"short-form reel (strongest hook first, fast cuts)":"long-form (chronological story, calmer pacing)")+"\nMax total duration: "+max+"s. Preferred duration: "+Math.round(target)+"s.\nReference style: "+(refStyle?JSON.stringify({avg_seconds_per_cut:+refStyle.pace.toFixed(2),motion:+refStyle.motion.toFixed(3),look:refStyle.look}):"none")+"\nClips (attached images are contact sheets of the video clips in this order, labeled with timestamps): "+JSON.stringify(info)+"\nUser caption lines: "+JSON.stringify(lines)+"\nRules: pick the best moments and skip dark, blurry or dull parts. Each segment must lie inside its clip (0<=in<out<=duration). Total must not exceed the max. Match the reference pace when given. Add captions only if the user gave lines or the prompt asks for text.\nReturn: {\"look\":\"none|warm|cool|bw|vivid\",\"segments\":[{\"m\":clipIndex,\"in\":sec,\"out\":sec,\"zoom\":\"in|out\",\"caption\":\"\"}]}";
+ return sample.json(q,imgs.length?{images:imgs}:{})}
+function clean(r,max){if(!r||!Array.isArray(r.segments))return null;let tot=0;const out=[];
+ for(const s of r.segments){const m=media[s.m];if(!m)continue;let a=Math.max(0,+s.in||0),b;
+  if(m.kind==="image"){a=0;b=Math.min(3,Math.max(1.5,(+s.out-+s.in)||2.5))}else b=Math.min(m.dur,+s.out||0);
+  if(b-a<.5)continue;if(tot+b-a>max)b=a+(max-tot);if(b-a<.5)break;tot+=b-a;
+  out.push({src:m.name,m:s.m,in:+a.toFixed(2),out:+b.toFixed(2),zoom:s.zoom==="out"?"out":"in",caption:String(s.caption||"")})}
+ return out.length?{segs:out,look:r.look}:null}
+async function build(){
+ if(!media.length){st("Upload at least one video or photo first.");return null}
+ if(media.some(m=>m.kind==="video"&&!m.dur)){st("Footage is still loading. Try again in a moment.");return null}
+ await analyzeAll();
+ const max=Math.min(300,+$("#cap").value),lines=$("#caps").value.split("\n").map(s=>s.trim()).filter(Boolean);
+ aiSegs=null;const first=buildLocal();if(!first)return null;
+ const n=first.segments.length,len=first.duration/n;
+ let segs=smartSegs(n,len,lines),look=refStyle?refStyle.look:null,note="Planned on this device from motion, sharpness and audio energy.";
+ try{st("AI director is planning the edit…");const r=clean(await askAI(max,first.duration,lines),max);
+  if(r){segs=r.segs;if(LOOK[r.look])look=r.look;note="Planned by the AI director from your footage frames, reference and prompt."}}catch(e){note+=" AI director unavailable ("+(e.code||"error")+")."}
+ const prev=$("#look").value;if(prev==="auto"&&look)$("#look").value=look;
+ aiSegs=segs.length?segs:null;const p=buildLocal();$("#look").value=prev;aiSegs=null;
+ if(p)$("#sum").textContent=note+"\n"+$("#sum").textContent;
+ return p}
+$("#plan").onclick=async()=>{if(busy)return;busy=true;try{if(await build())st("Plan ready. Press Render videos.")}catch(e){st("Planning failed: "+e.message)}busy=false};
+$("#dj").onclick=async()=>{const d=await cap("downloads");const data=JSON.stringify(plan,null,2);if(!d){const x=document.createElement("a");x.href=URL.createObjectURL(new Blob([data],{type:"application/json"}));x.download="edit-plan.json";x.click();return}try{await d.save({filename:"edit-plan.json",data})}catch(e){}};
+</script></body></html>

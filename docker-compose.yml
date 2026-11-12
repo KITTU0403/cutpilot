@@ -1,0 +1,8 @@
+services:
+  cutpilot:
+    build: ./backend
+    ports: ["8000:8000"]
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - WHISPER_MODEL=${WHISPER_MODEL:-small}
+    volumes: ["./data:/data"]
